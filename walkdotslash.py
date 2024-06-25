@@ -7,25 +7,32 @@ from datetime import datetime, timezone
 from tqdm import tqdm
 import hashlib
 
+fn = f".walkdotslash/{int(time.time())}"
+pathlib.Path('.walkdotslash').mkdir(parents=True, exist_ok=True) 
+
 a = os.walk(".")
 b = []
+c = []
 while True:
     try:
         i = next(a)
         num = 0
         dn = i[0].replace('\\', '/') + '/'
         for j in i[2]:
-            b.append(dn + j)
+            c.append(dn + j)
             num += 1
+        b.append([dn, num])
         print(f"{dn} ({num})")
     except StopIteration:
         break
-b = set(b)
-c = list(b)
+
+with open(fn + "-directory.json", 'w', encoding='utf8') as json_file:
+    json.dump(b, json_file, indent=2, ensure_ascii=False)
+
+c = list(set(c))
 c.sort()
-fn = f".walkdotslash/{int(time.time())}.json"
-pathlib.Path('.walkdotslash').mkdir(parents=True, exist_ok=True) 
-with open(fn, 'w', encoding='utf8') as json_file:
+
+with open(fn + "-simple.json", 'w', encoding='utf8') as json_file:
     json.dump(c, json_file, indent=2, ensure_ascii=False)
 
 d = []
@@ -38,7 +45,7 @@ for i in tqdm(c):
         d.append([i, stat.st_size, modified.isoformat()])
     except:
         d.append([i, 0, "error"])
-with open(fn, 'w', encoding='utf8') as json_file:
+with open(fn + "-datesize.json", 'w', encoding='utf8') as json_file:
     json.dump(d, json_file, indent=2, ensure_ascii=False)
 
 scale = 0
@@ -71,5 +78,5 @@ with tqdm(total = total_size, unit = unit[scale], bar_format = '{percentage:3.0f
             e.append([i[0], i[1], i[2], "error"])
         #pbar.update(i[1])
 
-with open(fn, 'w', encoding='utf8') as json_file:
-    json.dump(d, json_file, indent=2, ensure_ascii=False)
+with open(fn + "-sha1.json", 'w', encoding='utf8') as json_file:
+    json.dump(e, json_file, indent=2, ensure_ascii=False)
