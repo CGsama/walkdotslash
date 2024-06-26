@@ -6,9 +6,10 @@ import pathlib
 from datetime import datetime, timezone
 from tqdm import tqdm
 import hashlib
+import re
 
 fn = f".walkdotslash/{int(time.time())}"
-pathlib.Path('.walkdotslash').mkdir(parents=True, exist_ok=True) 
+pathlib.Path('.walkdotslash').mkdir(parents=True, exist_ok=True)
 
 a = os.walk(".")
 b = []
@@ -29,7 +30,31 @@ while True:
 with open(fn + "-directory.json", 'w', encoding='utf8') as json_file:
     json.dump(b, json_file, indent=2, ensure_ascii=False)
 
-c = list(set(c))
+c = set(c)
+
+prevs = os.listdir(".walkdotslash")
+prevs.sort()
+prev = 0
+for i in prevs:
+    if re.compile("(\d+)-simple.json").match(i):
+        if prev < int(re.compile("(\d+)-simple.json").match(i)[1]):
+            prev = int(re.compile("(\d+)-simple.json").match(i)[1])
+if prev:
+    with open(f".walkdotslash/{prev}-simple.json", 'r', encoding='utf8') as json_data:
+        prev = set(json.load(json_data))
+
+    delta_add = list(c - prev)
+    delta_del = list(prev - c)
+    delta_int = list(prev & c)
+    delta_add.sort()
+    delta_del.sort()
+    delta_int.sort()
+
+    with open(fn + "-delta.json", 'w', encoding='utf8') as json_file:
+        json.dump({"add":delta_add,"del":delta_del}, json_file, indent=2, ensure_ascii=False)
+
+
+c = list(c)
 c.sort()
 
 with open(fn + "-simple.json", 'w', encoding='utf8') as json_file:
@@ -64,7 +89,7 @@ def getRate(num):
 """
       
 e = []
-with tqdm(total = total_size, unit = unit[scale], bar_format = '{percentage:3.0f}% {bar} {n:.2f}/{total:.2f} [{elapsed}<{remaining}, {rate_noinv_fmt}, {rate_inv_fmt})]') as pbar:
+with tqdm(total = total_size, unit = unit[scale], bar_format = '{percentage:3.0f}% {bar} {n:.2f}/{total:.2f} ' + unit[scale] +' [{elapsed}<{remaining}, {rate_noinv_fmt}, {rate_inv_fmt})]') as pbar:
     for i in d:
         try:
             file_hash = hashlib.sha1()
@@ -80,3 +105,32 @@ with tqdm(total = total_size, unit = unit[scale], bar_format = '{percentage:3.0f
 
 with open(fn + "-sha1.json", 'w', encoding='utf8') as json_file:
     json.dump(e, json_file, indent=2, ensure_ascii=False)
+
+prev = 0
+for i in prevs:
+    if re.compile("(\d+)-sha1.json").match(i):
+        if prev < int(re.compile("(\d+)-sha1.json").match(i)[1]):
+            prev = int(re.compile("(\d+)-sha1.json").match(i)[1])
+if prev:
+    with open(f".walkdotslash/{prev}-sha1.json", 'r', encoding='utf8') as json_data:
+        prev = json.load(json_data)
+
+    prevd = {}
+    for i in prev:
+        prevd[i[0]] = i[3]
+
+    ed = {}
+    for i in e:
+        ed[i[0]] = i[3]
+
+    delta_mod = []
+
+    for i in delta_int:
+        if prevd[i] != ed[i]:
+            delta_mod.append(i)
+
+    delta_mod = list(set(delta_mod))
+    delta_mod.sort()
+
+    with open(fn + "-delta.json", 'w', encoding='utf8') as json_file:
+        json.dump({"add":delta_add,"del":delta_del,"mod":delta_mod}, json_file, indent=2, ensure_ascii=False)
